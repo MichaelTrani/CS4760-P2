@@ -22,11 +22,9 @@ int main(int argc, char* argv[])
     while ((option = getopt(argc, argv, "t:n:")) != -1) {
         switch (option)
         {
-
             case 't':
                  user_time = atoi(optarg);
                  break;
-            
             case 'n':
                 process_count = atoi(optarg);
                 if (process_count > PROCESS_MAX) {
@@ -36,7 +34,6 @@ int main(int argc, char* argv[])
                 else
                     process_count = atoi(optarg);
                 break;
-
             default:
                 break;
         }
@@ -82,14 +79,8 @@ void parent(){
 }
 
 
-
-
-
-
-
 void child()
 {
     sleep(5);
     execl(path, command, (char*)0);
-
 }
