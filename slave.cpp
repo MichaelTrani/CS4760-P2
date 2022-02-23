@@ -7,11 +7,9 @@ February 2022
 //using namespace std;
 
 
-
 int main(int argc, char* argv[])
 {   
-    sleep(3);
-
+    std::string programName = argv[0];
 
     int option;
     std::string fname = "logfile.";
@@ -25,28 +23,43 @@ int main(int argc, char* argv[])
             break;
 
         case 't':
-            timeIn = whitespaceRemover(optarg); // Not functioning
+            timeIn = whitespaceRemover(optarg); 
 
         default:
             break;
         }
     }
-    std::cout << "slave log: " << fname << std::endl;
-    std::cout << "time given: " << timeIn << std::endl;
+
+    std::ofstream logfile(fname);
+    logfile << "Execution Time: " << timeIn << std::endl;
+
+    sleep(5);
+    int shmid = shmget(SHMKEY, BUFF_SZ, 0777);
+    if (shmid == -1){
+        std::cerr << "Slave: " << fname << " Error in shmget cint. " << std::endl;
+        logfile << "Slave: " << fname << " Error in shmget cint. " << std::endl;
+        exit(1);
+    }
+
+    int* cint = (int*)(shmat(shmid, 0, 0));  // read
+    logfile << "ticket number: " << *cint << std::endl;
+
+    /*
+    for ( i = 0; i < 5; i++ )
+    {
+        execute code to enter critical section;
+        sleep for random amount of time (between 0 and 5 seconds);
+        critical_section();
+        sleep for random amount of time (between 0 and 5 seconds);
+        execute code to exit from critical section;
+    }
+    
+    */
 
 
 
-    //std::string programName = argv[0];
-    //sleep(5);
-    //int shmid = shmget(SHMKEY, BUFF_SZ, 0777);
-    //if (shmid == -1){
-    //    std::cerr << "Slave: ... Error in shmget ..." << std::endl;
-    //    exit(1);
-    //}
-
-    //int* cint = (int*)(shmat(shmid, 0, 0));  // read
-    //std::cout << "Slave: Read Val. = " << *cint << std::endl;
-
+    logfile << "Completion Time: " << timeFunction() << std::endl;;
+    logfile.close();
     return 0;
 }
 
@@ -64,14 +77,7 @@ Within the critical section, wait for a random number of seconds (in the range [
 For each child process, tweak the code so that the process requests and enters the critical section at most five times.
 
 The code for each child process should use the following template:
-for ( i = 0; i < 5; i++ )
-{
-execute code to enter critical section;
-sleep for random amount of time (between 0 and 5 seconds);
-critical_section();
-sleep for random amount of time (between 0 and 5 seconds);
-execute code to exit from critical section;
-}
+
 
 The bakery algorithm requires you to specify the number of processes in the system. 
 I’ll suggest specifying it as a constant macro (use #define) in a header file called config.h. 
