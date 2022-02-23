@@ -1,0 +1,2 @@
+C:\Users\trani\Desktop\OS_2\Projects\P2\slave.cpp|637811301891334552|/classes/os/trani/||g++ -c -x c++ /classes/os/trani/slave.cpp -g2 -gdwarf-2 -o "/classes/os/trani/slave.o" -Wall -Wswitch -W"no-deprecated-declarations" -W"empty-body" -Wconversion -W"return-type" -Wparentheses -W"no-format" -Wuninitialized -W"unreachable-code" -W"unused-function" -W"unused-value" -W"unused-variable" -O0 -fno-strict-aliasing -fno-omit-frame-pointer -fthreadsafe-statics -fexceptions -frtti -std=c++11
+C:\Users\trani\Desktop\OS_2\Projects\P2\p2.h|637811223653461827|/classes/os/trani/|| 

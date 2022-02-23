@@ -1,0 +1,1 @@
+g++ -o "/classes/os/trani/slave" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack /classes/os/trani/slave.o

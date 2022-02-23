@@ -1,23 +1,22 @@
+/*
+Author: Michael Trani
+February 2022
+*/
 #include"p2.h"
+#include"config.h"
 
-#define DEFAULT_TIME 100
-#define PROCESS_MAX 20
 pid_t waitreturn;	// for waiting on process to end
 
+void child(int);
+void parent(int);
 
-void child();
-void parent();
+int main(int argc, char* argv[]){
 
-char command[] = "";		// Command to be executed
-char path[] = "./slave";		// Path for the command
-
-int main(int argc, char* argv[])
-{
     std::string programName = argv[0];
 
     int option;
     int user_time = DEFAULT_TIME;
-    int process_count = 20;
+    int total_processes = 20;
 
     while ((option = getopt(argc, argv, "t:n:")) != -1) {
         switch (option)
@@ -26,42 +25,60 @@ int main(int argc, char* argv[])
                  user_time = atoi(optarg);
                  break;
             case 'n':
-                process_count = atoi(optarg);
-                if (process_count > PROCESS_MAX) {
-                    process_count = PROCESS_MAX;
+                total_processes = atoi(optarg);
+                if (total_processes > PROCESS_MAX) {
+                    total_processes = PROCESS_MAX;
                     std::cout << "WARNING: process count(n) override: 20 Maximum.\n";
                 }
                 else
-                    process_count = atoi(optarg);
+                    total_processes = atoi(optarg);
                 break;
             default:
                 break;
         }
     }
 
-    switch (fork()) {
-        case -1:
-            std::cout << "Failed to fork" << std::endl;
-            return (1);
+    pid_t activeChildren[PROCESS_MAX];  // Storage for active programs
+    int process_counter = 0;
 
-        case 0:
-            child();
-            break;
+    for(int i = total_processes; i > 0; i--){
 
-        default:
-            parent();
-            break;
+        //get start time
+
+//        if (process_counter)
+
+        int status = 0;
+        switch (fork()) {
+            case -1:
+                std::cout << "Failed to fork" << std::endl;
+                return (1);
+                //do a perror
+
+            case 0:
+                activeChildren[i] = getpid();
+                process_counter++;
+                child(activeChildren[i]);
+                break;
+
+            default:
+                parent(i);
+                waitreturn = wait(&status);
+                status = 0;
+                break;
+        }
+
+
+        //check timer?
+        // get current time. Subtrack count. is it less than it should be? it's a start
     }
 
     return 0;
 }
 
-void parent(){
-    int status = 0;
+void parent(int temp){
     // Get shared memory segment identifier
     int shmid = shmget(SHMKEY, BUFF_SZ, 0777 | IPC_CREAT);
-    if (shmid == -1)
-    {
+    if (shmid == -1){
         std::cout << "Parent: ... Error in shmget ..." << std::endl;
         exit(1);
     }
@@ -70,17 +87,26 @@ void parent(){
     char* paddr = (char*)(shmat(shmid, 0, 0));
     int* pint = (int*)(paddr);  
     
-    *pint = 55;             /* Write into the shared area. */
+    /* Write into the shared area. */
+    *pint = temp;             
     sleep(2);
-
-    std::cout << "Parent: Written Val.: = " << *pint << std::endl;
-    waitreturn = wait(&status);
-
+    //std::cout << "Master: Written Val.: = " << *pint << std::endl;
 }
 
 
-void child()
-{
-    sleep(5);
-    execl(path, command, (char*)0);
+void child(int slave_pid){
+    slave_args += std::to_string(slave_pid);
+    slave_time += timeFunction();
+    
+    execl(path.c_str(),"slave", slave_args.c_str(), slave_time.c_str(), (char*)0);
+
+    std::cout << "ERROR: excel failed to execute.\n" << std::endl;
 }
+
+/*
+todo:
+    Check for concurrent processes
+        add/sub
+
+
+*/

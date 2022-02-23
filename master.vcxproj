@@ -106,6 +106,7 @@
     <None Include="makefile" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="config.h" />
     <ClInclude Include="p2.h" />
   </ItemGroup>
   <ItemDefinitionGroup />

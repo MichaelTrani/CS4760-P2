@@ -89,8 +89,8 @@
     <RemoteDeployDir>$(RemoteRootDir)/</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <OutDir>$(ProjectDir)bin\</OutDir>
-    <IntDir>$(ProjectDir)obj\</IntDir>
+    <OutDir>$(ProjectDir)bin2\</OutDir>
+    <IntDir>$(ProjectDir)obj2\</IntDir>
     <TargetExt />
     <RemoteIntRelDir>$(RemoteProjectRelDir)</RemoteIntRelDir>
     <RemoteOutRelDir>$(RemoteProjectRelDir)</RemoteOutRelDir>
@@ -98,6 +98,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="slave.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="p2.h" />
   </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
