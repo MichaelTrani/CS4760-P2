@@ -7,11 +7,11 @@
 // Shared mem vars
 int shmid_ticketNumber;
 int* ticketNumber_ptr;
-
 int shmid_choosing;
 int* choosing_ptr;
 
 std::string error_message;
+std::ofstream logfile;
 
 pid_t parental;
 pid_t children;
@@ -24,16 +24,15 @@ int maxslaves;
 int main(int argc, char* argv[]){   
 
     error_message = argv[0];
-    error_message.erase(0, 2);        // remove annoying ./ at start
+    error_message.erase(0, 2);        // removes annoying ./ at start
     error_message += "::ERROR: ";
     std::string logname = "logs/logfile.";
 
-    srand(time(0));
-    int timerLock = 1 + rand() % 5;  // used for waiting period
-
-    int option;
+    srand((unsigned int)time(NULL));
+    int timerLock = 1 + rand() % 5;  // used for both waiting periods
 
     // input fed from master
+    int option;
     while ((option = getopt(argc, argv, "i:t:n:")) != -1) {
         switch (option)
         {
@@ -55,9 +54,12 @@ int main(int argc, char* argv[]){
         }
     }
 
+    logfile.open(logname);
+    catch_sigterm();
+
     // Log small details
-    std::ofstream logfile(logname);
     logfile << "Execution Time: " << timeIn << std::endl;
+    logfile << "Process Number: " << processnum << std::endl;
     logfile << "This program waits: " << timerLock << " seconds.\n";
 
     // Shared Memory block
@@ -97,7 +99,7 @@ int main(int argc, char* argv[]){
         }
 
         ticketNumber_ptr[(cprocess - 1)] = 1 + maximum;
-        std:: cout << "Slave Process:" << cprocess << " Ticket# "<< ticketNumber_ptr[(cprocess - 1)] << std::endl;
+        //std:: cout << "Slave Process:" << cprocess << " Ticket# "<< ticketNumber_ptr[(cprocess - 1)] << std::endl;
         logfile << timeFunction() << "  Ticket# "<< ticketNumber_ptr[(cprocess - 1)] << std::endl;
         choosing_ptr[(cprocess - 1)] = 0;
 
@@ -126,21 +128,47 @@ int main(int argc, char* argv[]){
         ticketNumber_ptr[cprocess - 1] = 0;
     }
     
+    shmdt(shared_num_ptr);
+    shmdt(choosing_ptr);
+    shmdt(ticketNumber_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+    shmctl(shmid_choosing, IPC_RMID, NULL);
+    shmctl(shmid_ticketNumber, IPC_RMID, NULL);
+
     logfile << "Completion Time: " << timeFunction() << "\n\n";
     logfile.close();
 
-
-    
-    
-    
-    
-    
     return 0;
 
 
 
 
 }
+
+void sigterm_handler(int signum, siginfo_t* info, void* ptr)
+{
+    // detaching and deleting shared memory
+    shmdt(shared_num_ptr);
+    shmdt(choosing_ptr);
+    shmdt(ticketNumber_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+    shmctl(shmid_choosing, IPC_RMID, NULL);
+    shmctl(shmid_ticketNumber, IPC_RMID, NULL);
+
+    logfile << "TERMINATED BY SIGNAL\n";
+    logfile.close();
+    exit(0);
+}
+
+void catch_sigterm(){
+    static struct sigaction _sigact;
+    memset(&_sigact, 0, sizeof(_sigact));
+    _sigact.sa_sigaction = sigterm_handler;
+    _sigact.sa_flags = SA_SIGINFO;
+    sigaction(SIGTERM, &_sigact, NULL);
+}
+
+
 
 
 

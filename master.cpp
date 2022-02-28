@@ -10,22 +10,95 @@ void child();
 void parent(int);
 
 std::string error_message;
-std::string path = "./slave";
+std::string warning_message;
 
+std::string path = "./slave";
 
 pid_t* child_pid;
 int active_process_counter = 1;
 int total_processes = 5;
 
+// Signal handlers
+void sigalrm_handler(int signum, siginfo_t* info, void* ptr) {
+    // ignore other interrupt signals
+    signal(SIGINT, SIG_IGN);
 
+    std::cout << warning_message << " Child processes exceeded limit\n";
 
+    // clean shared mem
+    shmdt(shared_num_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+
+    pid_t ctemp[total_processes]; // temporary processes for slaves
+
+    for (int i = 0; i < total_processes; i++) {
+        ctemp[i] = child_pid[i];
+    }
+
+    free(child_pid);
+
+    // kill signal for slaves
+    for (int j = 0; j < total_processes; j++) {
+        kill(ctemp[j], SIGTERM);
+    }
+
+}
+
+void sigint_handler(int signum, siginfo_t* info, void* ptr) {
+    // prevents multiple interrupts
+    signal(SIGINT, SIG_IGN);
+    signal(SIGALRM, SIG_IGN);
+
+    std::cout << warning_message << " Interrupt. Exiting.\n";
+
+    // clean shared mem
+    shmdt(shared_num_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+
+    pid_t ctemp[total_processes]; // temporary processes for slaves
+
+    for (int i = 0; i < total_processes; i++) {
+        ctemp[i] = child_pid[i];
+    }
+
+    free(child_pid);
+
+    // kill signal for slaves
+    for (int j = 0; j < total_processes; j++) {
+        kill(ctemp[j], SIGTERM);
+    }
+}
+
+void sigalrm_catcher() {
+    static struct sigaction _sigact;
+
+    memset(&_sigact, 0, sizeof(_sigact));
+
+    _sigact.sa_sigaction = sigalrm_handler;
+    _sigact.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGALRM, &_sigact, NULL);
+}
+
+void sigint_catcher() {
+    static struct sigaction _sigact;
+
+    memset(&_sigact, 0, sizeof(_sigact));
+
+    _sigact.sa_sigaction = sigint_handler;
+    _sigact.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGINT, &_sigact, NULL);
+}
 
 int main(int argc, char* argv[]) {
     error_message = argv[0];
-    error_message.erase(0, 2);        // remove annoying ./ at start
+    error_message.erase(0, 2);        // removes annoying ./ at start
+    warning_message = error_message;
+    warning_message += "--WARNING--";
     error_message += "::ERROR: ";
 
-    // user args
+    // user args section
     int option;
     int user_time = DEFAULT_TIME;
 
@@ -61,22 +134,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-   // shared memory initialization
+    // Shared memory initialization section
    
-        // Get shared memory segment identifier
+    // Get shared memory segment identifier
     shmid = shmget(SHMKEY, STR_SZ, 0777 | IPC_CREAT); // STRING
     if (shmid == -1) {
         std::cout << "Parent: ... Error in shmget ..." << std::endl;
         exit(1);
     }
 
-   // for signal handling
-   shmkey = ftok("./master", 246810);   // ##### KEY 1
-   shmid_shared_num = shmget(shmkey, sizeof(shared_num_ptr), 0777 | IPC_CREAT);
-   shared_num_ptr = (int *)shmat(shmid_shared_num, NULL, 0);
-   shared_num_ptr[0] = 0;
-
-
+    // for signal handling
+    shmkey = ftok("./master", 246810);   // ##### KEY 1
+    shmid_shared_num = shmget(shmkey, sizeof(shared_num_ptr), 0777 | IPC_CREAT);
+    shared_num_ptr = (int *)shmat(shmid_shared_num, NULL, 0);
+    shared_num_ptr[0] = 0;
 
     char slave_max_stack[PROCESS_RUNNING_MAX];  // for writing to the buffer - for running
     int slave_inc = 5;  // 5 max processes at at time
@@ -93,15 +164,21 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+
+    // Main loop:
     pid_t parental;
 
+    // Signal catchers after shared mem established
+    sigalrm_catcher();
+    sigint_catcher();
+
     //get start time
+    alarm(user_time);
 
     do {
         if (active_process_counter < PROCESS_COUNT_MAX) {
-
-            int status = 0;
             switch (parental = fork()) {
+
             case -1:
                 error_message += "::Failed to fork.\n";
                 perror(error_message.c_str());
@@ -114,7 +191,6 @@ int main(int argc, char* argv[]) {
 
             default:
                 parent(active_process_counter);
-                //waitreturn = wait(&status);
                 break;
             }
             active_process_counter++;
@@ -129,45 +205,38 @@ int main(int argc, char* argv[]) {
         waitpid(child_pid[i], &status, 0);  // should match active_process_counter
     }
 
-
     free(child_pid);
-
+    shmdt(shared_num_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
 
     return 0;
 }
 
+
+// Parent Child functions
 void parent(int temp) {
-
-
     // Get the pointer to shared block
     char* paddr = (char*)(shmat(shmid, 0, 0));
     int* pint = (int*)(paddr);
 
-
     /* Write into the shared area. */
     *pint = temp;
-    sleep(2);
-    //std::cout << "Master: Written Val.: = " << *pint << std::endl;
+    //sleep(2);   // is this necessary?
 }
 
 void child() {
-    pid_t temp = getpid();
+
+    pid_t temp = getpid();  
+
     std::string slave_pid_arg = std::to_string(temp);  // argument for slave - PID
     std::string slave_time = timeFunction();       // argument for slave - time
-    std::string slave_max = std::to_string(total_processes);
-    //execl(path.c_str(), "slave", "-i", slave_pid_arg, "-t", slave_time, (char*)0);
+    std::string slave_max = std::to_string(total_processes);    // argument for total num of processes
+
     execl("./slave", "slave", "-i", slave_pid_arg.c_str(), "-t", slave_time.c_str(), "-n", slave_max.c_str(), (char*) NULL);
     
     // If we get to this point the call failed.
     error_message += "::excel failed to execute.\n";
     perror(error_message.c_str());
-    std::cout << "ERROR: excel failed to execute.\n" << std::endl;
+    std::cout << "excel failed to execute.\n" << std::endl;
 }
 
-/*
-todo:
-    Check for concurrent processes
-        add/sub
-
-
-*/

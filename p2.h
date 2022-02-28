@@ -7,23 +7,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <unistd.h>
 #include <fstream>
+#include <algorithm>
+#include <ctime>
+#include <cstring>
+#include <iostream>
+#include <unistd.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include<algorithm>
-#include<ctime>
 #include <time.h>
 #include <errno.h>
-    /*  Author: Michael Trani
-        February 2022       */
 #include <stdint.h>
 #include <signal.h>
-#include <sys/shm.h>
 #include <sys/types.h>
-#include <sys/ipc.h>
-
+#include <signal.h>
 
 //char* timeFunction();
 //std::string whitespaceRemover(std::string);
@@ -38,7 +36,7 @@ key_t shmkey;
 int shmid_shared_num;
 int* shared_num_ptr;
 
-
+//Grabs time
 char* timeFunction() { // Grabs current time and outputs hour/min/sec
     time_t current_sec = time(0);
     int length = 9;
@@ -51,12 +49,13 @@ char* timeFunction() { // Grabs current time and outputs hour/min/sec
     return output;
 }
 
-
+// Removes whitespace - no longer needed
 std::string whitespaceRemover(std::string modifyME){ // This removes an annoying whitespace fed into the program.
     remove(modifyME.begin(), modifyME.end(), ' ');  
 
     return modifyME;
 }
+
 
 
 
