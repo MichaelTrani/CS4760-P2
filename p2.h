@@ -16,6 +16,8 @@
 #include<ctime>
 #include <time.h>
 #include <errno.h>
+    /*  Author: Michael Trani
+        February 2022       */
 #include <stdint.h>
 #include <signal.h>
 #include <sys/shm.h>
@@ -23,18 +25,18 @@
 #include <sys/ipc.h>
 
 
-
-
-char* timeFunction();
-std::string whitespaceRemover(std::string);
+//char* timeFunction();
+//std::string whitespaceRemover(std::string);
 
 #define SHMKEY	859047
 #define STR_SZ	sizeof ( std::string )
 #define INT_SZ	sizeof ( int )
 #define PERM (S_IRUSR | S_IWUSR)
 
-//rebuild
+//shared memory attempt #3 :p
 key_t shmkey;
+int shmid_shared_num;
+int* shared_num_ptr;
 
 
 char* timeFunction() { // Grabs current time and outputs hour/min/sec

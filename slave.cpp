@@ -4,6 +4,11 @@
 #include"p2.h"
 
 
+int shmid_choosing;
+int shmid_ticketNumber;
+int* choosing_ptr;
+int* ticketNumber_ptr;
+
 int main(int argc, char* argv[]){   
 
     srand(time(0));

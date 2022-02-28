@@ -11,28 +11,34 @@ void parent(int);
 std::string path = "./slave";
 std::string slave_args = "-i ";
 std::string slave_time = "-t ";
+pid_t* child_pid;
 int active_process_counter = 1;
 
-struct Shared_Space* SM;
 
 
 int main(int argc, char* argv[]){
-    std::string programName = argv[0];
+    std::string error_message = argv[0];
+    error_message.erase(0, 2);        // remove annoying ./ at start
 
+    // user args
     int option;
     int user_time = DEFAULT_TIME;
-    int total_processes = 20;
+    int total_processes = 5;
 
-    while ((option = getopt(argc, argv, "t:n:")) != -1) {
-        switch (option)
-        {
-            case 't':
-                 user_time = atoi(optarg);
-                 break;
-            case 'n':
+    while ((option = getopt(argc, argv, "ht:n:")) != -1) {
+        switch (option){
+            case 'h':
+                std::cout << "-t ss\tTimeout in seconds\n" <<
+                    "-n uu\tNumber of total processes to run.\n";
+                return 0;
+                
+            case 't':  // How long should it run before timing out - user input
+                    user_time = atoi(optarg);
+                    break;
+            case 'n': // How many processes should it run - user input
                 total_processes = atoi(optarg);
-                if (total_processes > PROCESS_MAX) {
-                    total_processes = PROCESS_MAX;
+                if (total_processes > PROCESS_RUNNING_MAX) {
+                    total_processes = PROCESS_RUNNING_MAX;
                     std::cout << "WARNING: process count(n) override: 20 Maximum.\n";
                 }
                 else
@@ -43,10 +49,32 @@ int main(int argc, char* argv[]){
         }
     }
 
-    time_t start_time = time(NULL);      // Creating time variables to use timer
-    time_t current_time = time(NULL);
-    pid_t activeChildren[PROCESS_MAX];  // Storage for active programs
+    if (user_time <= 1 || total_processes < 2) {
+        std::cout << error_message << "::Invalid input:\n\tTime must be greater than 1.\n\tProcesses must be more than 1.\n";
+        return 1;
+    }
+
+
+    pid_t activeChildren[PROCESS_RUNNING_MAX];  // Storage for active programs
     int process_counter = -1;
+
+    char slave_max_stack[PROCESS_RUNNING_MAX];  // for writing to the buffer - for running
+    int slave_inc = 3;  // arbitray 
+    snprintf(slave_max_stack, PROCESS_RUNNING_MAX, "%i", slave_inc);
+
+    char slave_max_to_run[PROCESS_COUNT_MAX];   // for writing to the buffer - for exe count
+    snprintf(slave_max_to_run, PROCESS_COUNT_MAX, "% i", total_processes);
+
+    if ((child_pid = (pid_t*)(malloc(total_processes * sizeof(pid_t)))) == NULL){
+        errno = ENOMEM; // out of memory error
+        error_message += "malloc total_processes out of memory.\n";
+        perror(error_message.c_str());
+        exit(1);
+    }
+
+
+    //
+
 
 
         //get start time
@@ -57,41 +85,42 @@ int main(int argc, char* argv[]){
         // check for ticket requests.
         // send number.
         // keep going until you're done.
-        do {
-            int status = 0;
-            if(active_process_counter < PROCESS_MAX){
 
-                int status = 0;
-                switch (fork()) {
-                case -1:
-                    std::cout << "Failed to fork" << std::endl;
-                    return (1);
-                    //do a perror
+        //do {
+        //    int status = 0;
+        //    if(active_process_counter < PROCESS_MAX){
 
-                case 0:
-                    process_counter++;
-                    activeChildren[process_counter] = getpid();
-                    child(activeChildren[process_counter]);
-                    break;
+        //        int status = 0;
+        //        switch (fork()) {
+        //        case -1:
+        //            std::cout << "Failed to fork" << std::endl;
+        //            return (1);
+        //            //do a perror
 
-                default:
-                    parent(process_counter);
-                    waitreturn = wait(&status);
-                    status = 0;
-                    break;
-                }
-                total_processes--;
-            }
+        //        case 0:
+        //            process_counter++;
+        //            activeChildren[process_counter] = getpid();
+        //            child(activeChildren[process_counter]);
+        //            break;
 
-            else
-                waitreturn = wait(&status);
+        //        default:
+        //            parent(process_counter);
+        //            waitreturn = wait(&status);
+        //            status = 0;
+        //            break;
+        //        }
+        //        total_processes--;
+        //    }
+
+        //    else
+        //        waitreturn = wait(&status);
 
 
-            // are any programs active?
-            //check timer? How much time has passed? Where are we putting this?
-            // get current time. Subtrack count. is it less than it should be? it's a start
+        //    // are any programs active?
+        //    //check timer? How much time has passed? Where are we putting this?
+        //    // get current time. Subtrack count. is it less than it should be? it's a start
 
-        } while (total_processes > 0);
+        //} while (total_processes > 0);
 
 
 
