@@ -8,6 +8,7 @@ pid_t waitreturn;	// for waiting on process to end
 void child(int);
 void parent(int);
 
+std::string error_message;
 std::string path = "./slave";
 std::string slave_args = "-i ";
 std::string slave_time = "-t ";
@@ -16,9 +17,11 @@ int active_process_counter = 1;
 
 
 
+
 int main(int argc, char* argv[]){
-    std::string error_message = argv[0];
+    error_message = argv[0];
     error_message.erase(0, 2);        // remove annoying ./ at start
+    error_message += "::ERROR: ";
 
     // user args
     int option;
@@ -67,61 +70,48 @@ int main(int argc, char* argv[]){
 
     if ((child_pid = (pid_t*)(malloc(total_processes * sizeof(pid_t)))) == NULL){
         errno = ENOMEM; // out of memory error
-        error_message += "malloc total_processes out of memory.\n";
+        error_message += "Malloc total_processes out of memory.\n";
         perror(error_message.c_str());
         exit(1);
     }
 
-
-    //
-
-
+    pid_t parental;
 
         //get start time
 
-//        if (process_counter)
-        // make child after one pass at least.
-        // when a child is made, modify count of remaining
-        // check for ticket requests.
-        // send number.
-        // keep going until you're done.
+    do {
+        int status = 0;
+        if(active_process_counter < PROCESS_COUNT_MAX){
 
-        //do {
-        //    int status = 0;
-        //    if(active_process_counter < PROCESS_MAX){
+            int status = 0;
+            switch (parental = fork()) {
+            case -1:
+                error_message += "::Failed to fork.\n";
+                perror(error_message.c_str());
+                return (1);
 
-        //        int status = 0;
-        //        switch (fork()) {
-        //        case -1:
-        //            std::cout << "Failed to fork" << std::endl;
-        //            return (1);
-        //            //do a perror
+            case 0:
+                activeChildren[process_counter] = getpid();
+                child(activeChildren[process_counter]);
+                break;
 
-        //        case 0:
-        //            process_counter++;
-        //            activeChildren[process_counter] = getpid();
-        //            child(activeChildren[process_counter]);
-        //            break;
-
-        //        default:
-        //            parent(process_counter);
-        //            waitreturn = wait(&status);
-        //            status = 0;
-        //            break;
-        //        }
-        //        total_processes--;
-        //    }
-
-        //    else
-        //        waitreturn = wait(&status);
+            default:
+                parent(active_process_counter);
+                waitreturn = wait(&status);
+                status = 0;
+                break;
+            }
+            active_process_counter++;
+        }
 
 
-        //    // are any programs active?
-        //    //check timer? How much time has passed? Where are we putting this?
-        //    // get current time. Subtrack count. is it less than it should be? it's a start
+        // are any programs active?
+        //check timer? How much time has passed? Where are we putting this?
+        // get current time. Subtrack count. is it less than it should be? it's a start
 
-        //} while (total_processes > 0);
+    } while (active_process_counter < (total_processes + 1));
 
+    free(child_pid);
 
 
     return 0;
@@ -148,11 +138,14 @@ void parent(int temp){
 
 
 void child(int slave_pid){
-    slave_args += std::to_string(slave_pid);
-    slave_time += timeFunction();
+    slave_args += std::to_string(slave_pid);  // argument for slave - PID
+    slave_time += timeFunction();       // argument for slave - time
     
     execl(path.c_str(),"slave", slave_args.c_str(), slave_time.c_str(), (char*)0);
 
+    // If we get to this point the call failed.
+    error_message += "::excel failed to execute.\n";
+    perror(error_message.c_str());
     std::cout << "ERROR: excel failed to execute.\n" << std::endl;
 }
 
