@@ -4,6 +4,7 @@
 #include"config.h"
 
 pid_t waitreturn;      // for waiting on process to end
+int shmid;
 
 void child();
 void parent(int);
@@ -38,6 +39,7 @@ int main(int argc, char* argv[]) {
         case 't':  // How long should it run before timing out - user input
             user_time = atoi(optarg);
             break;
+
         case 'n': // How many processes should it run - user input
             total_processes = atoi(optarg);
             if (total_processes > PROCESS_RUNNING_MAX) {
@@ -47,8 +49,10 @@ int main(int argc, char* argv[]) {
             else
                 total_processes = atoi(optarg);
             break;
+
         default:
-            break;
+            std::cout << "Unknown input\n";
+            return 1;
         }
     }
 
@@ -59,11 +63,20 @@ int main(int argc, char* argv[]) {
 
    // shared memory initialization
    
+        // Get shared memory segment identifier
+    shmid = shmget(SHMKEY, STR_SZ, 0777 | IPC_CREAT); // STRING
+    if (shmid == -1) {
+        std::cout << "Parent: ... Error in shmget ..." << std::endl;
+        exit(1);
+    }
+
    // for signal handling
    shmkey = ftok("./master", 246810);   // ##### KEY 1
    shmid_shared_num = shmget(shmkey, sizeof(shared_num_ptr), 0777 | IPC_CREAT);
    shared_num_ptr = (int *)shmat(shmid_shared_num, NULL, 0);
    shared_num_ptr[0] = 0;
+
+
 
     char slave_max_stack[PROCESS_RUNNING_MAX];  // for writing to the buffer - for running
     int slave_inc = 5;  // 5 max processes at at time
@@ -101,17 +114,12 @@ int main(int argc, char* argv[]) {
 
             default:
                 parent(active_process_counter);
-                waitreturn = wait(&status);
-                status = 0;
+                //waitreturn = wait(&status);
                 break;
             }
             active_process_counter++;
         }
 
-
-        // are any programs active?
-        //check timer? How much time has passed? Where are we putting this?
-        // get current time. Subtrack count. is it less than it should be? it's a start
 
     } while (active_process_counter < (total_processes + 1));
 
@@ -129,12 +137,7 @@ int main(int argc, char* argv[]) {
 }
 
 void parent(int temp) {
-    // Get shared memory segment identifier
-    int shmid = shmget(SHMKEY, STR_SZ, 0777 | IPC_CREAT); // STRING
-    if (shmid == -1) {
-        std::cout << "Parent: ... Error in shmget ..." << std::endl;
-        exit(1);
-    }
+
 
     // Get the pointer to shared block
     char* paddr = (char*)(shmat(shmid, 0, 0));
