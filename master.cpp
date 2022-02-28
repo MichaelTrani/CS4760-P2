@@ -80,8 +80,12 @@ int main(int argc, char* argv[]){
 
         //get start time
 
-    do {
-        if(active_process_counter < PROCESS_COUNT_MAX){
+//        if (process_counter)
+        // make child after one pass at least.
+        // when a child is made, modify count of remaining
+        // check for ticket requests.
+        // send number.
+        // keep going until you're done.
 
             int status = 0;
             switch (parental = fork()) {
