@@ -1,7 +1,5 @@
-/*
-Author: Michael Trani
-February 2022
-*/
+/*  Author: Michael Trani
+    February 2022       */
 #include"p2.h"
 #include"config.h"
 
@@ -10,8 +8,15 @@ pid_t waitreturn;	// for waiting on process to end
 void child(int);
 void parent(int);
 
-int main(int argc, char* argv[]){
+std::string path = "./slave";
+std::string slave_args = "-i ";
+std::string slave_time = "-t ";
+int active_process_counter = 1;
 
+struct Shared_Space* SM;
+
+
+int main(int argc, char* argv[]){
     std::string programName = argv[0];
 
     int option;
@@ -38,46 +43,64 @@ int main(int argc, char* argv[]){
         }
     }
 
+    time_t start_time = time(NULL);      // Creating time variables to use timer
+    time_t current_time = time(NULL);
     pid_t activeChildren[PROCESS_MAX];  // Storage for active programs
-    int process_counter = 0;
+    int process_counter = -1;
 
-    for(int i = total_processes; i > 0; i--){
 
         //get start time
 
 //        if (process_counter)
+        // make child after one pass at least.
+        // when a child is made, modify count of remaining
+        // check for ticket requests.
+        // send number.
+        // keep going until you're done.
+        do {
+            int status = 0;
+            if(active_process_counter < PROCESS_MAX){
 
-        int status = 0;
-        switch (fork()) {
-            case -1:
-                std::cout << "Failed to fork" << std::endl;
-                return (1);
-                //do a perror
+                int status = 0;
+                switch (fork()) {
+                case -1:
+                    std::cout << "Failed to fork" << std::endl;
+                    return (1);
+                    //do a perror
 
-            case 0:
-                activeChildren[i] = getpid();
-                process_counter++;
-                child(activeChildren[i]);
-                break;
+                case 0:
+                    process_counter++;
+                    activeChildren[process_counter] = getpid();
+                    child(activeChildren[process_counter]);
+                    break;
 
-            default:
-                parent(i);
+                default:
+                    parent(process_counter);
+                    waitreturn = wait(&status);
+                    status = 0;
+                    break;
+                }
+                total_processes--;
+            }
+
+            else
                 waitreturn = wait(&status);
-                status = 0;
-                break;
-        }
 
 
-        //check timer?
-        // get current time. Subtrack count. is it less than it should be? it's a start
-    }
+            // are any programs active?
+            //check timer? How much time has passed? Where are we putting this?
+            // get current time. Subtrack count. is it less than it should be? it's a start
+
+        } while (total_processes > 0);
+
+
 
     return 0;
 }
 
 void parent(int temp){
     // Get shared memory segment identifier
-    int shmid = shmget(SHMKEY, BUFF_SZ, 0777 | IPC_CREAT);
+    int shmid = shmget(SHMKEY, STR_SZ, 0777 | IPC_CREAT); // STRING
     if (shmid == -1){
         std::cout << "Parent: ... Error in shmget ..." << std::endl;
         exit(1);
@@ -86,6 +109,7 @@ void parent(int temp){
     // Get the pointer to shared block
     char* paddr = (char*)(shmat(shmid, 0, 0));
     int* pint = (int*)(paddr);  
+
     
     /* Write into the shared area. */
     *pint = temp;             

@@ -1,10 +1,9 @@
+/*  Author: Michael Trani
+    February 2022       */
 #ifndef P2_H
 #define P2_H
 #pragma once
-/*
-Author: Michael Trani
-February 2022
-*/
+
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -15,12 +14,27 @@ February 2022
 #include <sys/shm.h>
 #include<algorithm>
 #include<ctime>
+#include <time.h>
+#include <errno.h>
+#include <stdint.h>
+#include <signal.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
 
-#define SHMKEY	859047
-#define BUFF_SZ	sizeof ( std::string )
+
+
 
 char* timeFunction();
 std::string whitespaceRemover(std::string);
+
+#define SHMKEY	859047
+#define STR_SZ	sizeof ( std::string )
+#define INT_SZ	sizeof ( int )
+#define PERM (S_IRUSR | S_IWUSR)
+
+//rebuild
+key_t shmkey;
 
 
 char* timeFunction() { // Grabs current time and outputs hour/min/sec
