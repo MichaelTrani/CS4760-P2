@@ -5,15 +5,16 @@
 
 pid_t waitreturn;      // for waiting on process to end
 
-void child(int);
+void child();
 void parent(int);
 
 std::string error_message;
 std::string path = "./slave";
-std::string slave_args = "-i ";
-std::string slave_time = "-t ";
+
+
 pid_t* child_pid;
 int active_process_counter = 1;
+int total_processes = 5;
 
 
 
@@ -26,7 +27,6 @@ int main(int argc, char* argv[]) {
     // user args
     int option;
     int user_time = DEFAULT_TIME;
-    int total_processes = 5;
 
     while ((option = getopt(argc, argv, "ht:n:")) != -1) {
         switch (option) {
@@ -52,23 +52,27 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (user_time <= 1 || total_processes < 2) {
-        std::cout << error_message << "::Invalid input:\n\tTime must be greater than 1.\n\tProcesses must be more than 1.\n";
+    if (user_time <= 1 || total_processes < 1) {
+        std::cout << error_message << "::Invalid input:\n\tTime must be greater than 1.\n\tProcesses must be more than 0.\n";
         return 1;
     }
 
-
-    pid_t activeChildren[PROCESS_RUNNING_MAX];  // Storage for active programs
-    int process_counter = -1;
+   // shared memory initialization
+   
+   // for signal handling
+   shmkey = ftok("./master", 246810);   // ##### KEY 1
+   shmid_shared_num = shmget(shmkey, sizeof(shared_num_ptr), 0777 | IPC_CREAT);
+   shared_num_ptr = (int *)shmat(shmid_shared_num, NULL, 0);
+   shared_num_ptr[0] = 0;
 
     char slave_max_stack[PROCESS_RUNNING_MAX];  // for writing to the buffer - for running
-    int slave_inc = 3;  // arbitray
+    int slave_inc = 5;  // 5 max processes at at time
     snprintf(slave_max_stack, PROCESS_RUNNING_MAX, "%i", slave_inc);
-    std::cout << "slave stack max: " << slave_max_stack << std::endl;
 
     char slave_max_to_run[PROCESS_COUNT_MAX];   // for writing to the buffer - for exe count
     snprintf(slave_max_to_run, PROCESS_COUNT_MAX, "% i", total_processes);
 
+    // for PIDs
     if ((child_pid = (pid_t*)(malloc(total_processes * sizeof(pid_t)))) == NULL) {
         errno = ENOMEM; // out of memory error
         error_message += "Malloc total_processes out of memory.\n";
@@ -91,8 +95,8 @@ int main(int argc, char* argv[]) {
                 return (1);
 
             case 0:
-                activeChildren[process_counter] = getpid();
-                child(activeChildren[process_counter]);
+                child_pid[active_process_counter] = parental;
+                child();
                 break;
 
             default:
@@ -110,6 +114,13 @@ int main(int argc, char* argv[]) {
         // get current time. Subtrack count. is it less than it should be? it's a start
 
     } while (active_process_counter < (total_processes + 1));
+
+    // Wait for everything to end.
+    for (int i = 1; i < total_processes; i++) {
+        int status;
+        waitpid(child_pid[i], &status, 0);  // should match active_process_counter
+    }
+
 
     free(child_pid);
 
@@ -136,13 +147,14 @@ void parent(int temp) {
     //std::cout << "Master: Written Val.: = " << *pint << std::endl;
 }
 
-
-void child(int slave_pid) {
-    slave_args += std::to_string(slave_pid);  // argument for slave - PID
-    slave_time += timeFunction();       // argument for slave - time
-
-    execl(path.c_str(), "slave", slave_args.c_str(), slave_time.c_str(), (char*)0);
-
+void child() {
+    pid_t temp = getpid();
+    std::string slave_pid_arg = std::to_string(temp);  // argument for slave - PID
+    std::string slave_time = timeFunction();       // argument for slave - time
+    std::string slave_max = std::to_string(total_processes);
+    //execl(path.c_str(), "slave", "-i", slave_pid_arg, "-t", slave_time, (char*)0);
+    execl("./slave", "slave", "-i", slave_pid_arg.c_str(), "-t", slave_time.c_str(), "-n", slave_max.c_str(), (char*) NULL);
+    
     // If we get to this point the call failed.
     error_message += "::excel failed to execute.\n";
     perror(error_message.c_str());

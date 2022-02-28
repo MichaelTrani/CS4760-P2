@@ -100,9 +100,6 @@
     <ClCompile Include="master.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Instruction.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="makefile" />
   </ItemGroup>
   <ItemGroup>
