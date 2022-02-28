@@ -3,7 +3,7 @@
 #include"p2.h"
 #include"config.h"
 
-pid_t waitreturn;	// for waiting on process to end
+pid_t waitreturn;      // for waiting on process to end
 
 void child(int);
 void parent(int);
@@ -18,7 +18,7 @@ int active_process_counter = 1;
 
 
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
     error_message = argv[0];
     error_message.erase(0, 2);        // remove annoying ./ at start
     error_message += "::ERROR: ";
@@ -29,26 +29,26 @@ int main(int argc, char* argv[]){
     int total_processes = 5;
 
     while ((option = getopt(argc, argv, "ht:n:")) != -1) {
-        switch (option){
-            case 'h':
-                std::cout << "-t ss\tTimeout in seconds\n" <<
-                    "-n uu\tNumber of total processes to run.\n";
-                return 0;
-                
-            case 't':  // How long should it run before timing out - user input
-                    user_time = atoi(optarg);
-                    break;
-            case 'n': // How many processes should it run - user input
+        switch (option) {
+        case 'h':
+            std::cout << "-t ss\tTimeout in seconds\n" <<
+                "-n uu\tNumber of total processes to run.\n";
+            return 0;
+
+        case 't':  // How long should it run before timing out - user input
+            user_time = atoi(optarg);
+            break;
+        case 'n': // How many processes should it run - user input
+            total_processes = atoi(optarg);
+            if (total_processes > PROCESS_RUNNING_MAX) {
+                total_processes = PROCESS_RUNNING_MAX;
+                std::cout << "WARNING: process count(n) override: 20 Maximum.\n";
+            }
+            else
                 total_processes = atoi(optarg);
-                if (total_processes > PROCESS_RUNNING_MAX) {
-                    total_processes = PROCESS_RUNNING_MAX;
-                    std::cout << "WARNING: process count(n) override: 20 Maximum.\n";
-                }
-                else
-                    total_processes = atoi(optarg);
-                break;
-            default:
-                break;
+            break;
+        default:
+            break;
         }
     }
 
@@ -62,14 +62,14 @@ int main(int argc, char* argv[]){
     int process_counter = -1;
 
     char slave_max_stack[PROCESS_RUNNING_MAX];  // for writing to the buffer - for running
-    int slave_inc = 3;  // arbitray 
+    int slave_inc = 3;  // arbitray
     snprintf(slave_max_stack, PROCESS_RUNNING_MAX, "%i", slave_inc);
     std::cout << "slave stack max: " << slave_max_stack << std::endl;
 
     char slave_max_to_run[PROCESS_COUNT_MAX];   // for writing to the buffer - for exe count
     snprintf(slave_max_to_run, PROCESS_COUNT_MAX, "% i", total_processes);
 
-    if ((child_pid = (pid_t*)(malloc(total_processes * sizeof(pid_t)))) == NULL){
+    if ((child_pid = (pid_t*)(malloc(total_processes * sizeof(pid_t)))) == NULL) {
         errno = ENOMEM; // out of memory error
         error_message += "Malloc total_processes out of memory.\n";
         perror(error_message.c_str());
@@ -78,14 +78,10 @@ int main(int argc, char* argv[]){
 
     pid_t parental;
 
-        //get start time
+    //get start time
 
-//        if (process_counter)
-        // make child after one pass at least.
-        // when a child is made, modify count of remaining
-        // check for ticket requests.
-        // send number.
-        // keep going until you're done.
+    do {
+        if (active_process_counter < PROCESS_COUNT_MAX) {
 
             int status = 0;
             switch (parental = fork()) {
@@ -121,31 +117,31 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-void parent(int temp){
+void parent(int temp) {
     // Get shared memory segment identifier
     int shmid = shmget(SHMKEY, STR_SZ, 0777 | IPC_CREAT); // STRING
-    if (shmid == -1){
+    if (shmid == -1) {
         std::cout << "Parent: ... Error in shmget ..." << std::endl;
         exit(1);
     }
 
     // Get the pointer to shared block
     char* paddr = (char*)(shmat(shmid, 0, 0));
-    int* pint = (int*)(paddr);  
+    int* pint = (int*)(paddr);
 
-    
+
     /* Write into the shared area. */
-    *pint = temp;             
+    *pint = temp;
     sleep(2);
     //std::cout << "Master: Written Val.: = " << *pint << std::endl;
 }
 
 
-void child(int slave_pid){
+void child(int slave_pid) {
     slave_args += std::to_string(slave_pid);  // argument for slave - PID
     slave_time += timeFunction();       // argument for slave - time
-    
-    execl(path.c_str(),"slave", slave_args.c_str(), slave_time.c_str(), (char*)0);
+
+    execl(path.c_str(), "slave", slave_args.c_str(), slave_time.c_str(), (char*)0);
 
     // If we get to this point the call failed.
     error_message += "::excel failed to execute.\n";
