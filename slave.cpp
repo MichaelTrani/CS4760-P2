@@ -10,7 +10,7 @@ int* choosing_ptr;
 int* ticketNumber_ptr;
 
 int main(int argc, char* argv[]){   
-
+    std::cout << "hello from slave process\n";
     srand(time(0));
     int timerLock = 1 + rand() % 5;  // used for waiting period
     std::string programName = argv[0];  // perror msg
