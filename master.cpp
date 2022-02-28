@@ -8,6 +8,10 @@ int shmid;
 
 void child();
 void parent(int);
+void sigalrm_handler(int signum, siginfo_t* info, void* ptr);
+void sigint_handler(int signum, siginfo_t* info, void* ptr);
+void sigalrm_catcher();
+void sigint_catcher();
 
 std::string error_message;
 std::string warning_message;
@@ -18,78 +22,7 @@ pid_t* child_pid;
 int active_process_counter = 1;
 int total_processes = 5;
 
-// Signal handlers
-void sigalrm_handler(int signum, siginfo_t* info, void* ptr) {
-    // ignore other interrupt signals
-    signal(SIGINT, SIG_IGN);
 
-    std::cout << warning_message << " Child processes exceeded limit\n";
-
-    // clean shared mem
-    shmdt(shared_num_ptr);
-    shmctl(shmid_shared_num, IPC_RMID, NULL);
-
-    pid_t ctemp[total_processes]; // temporary processes for slaves
-
-    for (int i = 0; i < total_processes; i++) {
-        ctemp[i] = child_pid[i];
-    }
-
-    free(child_pid);
-
-    // kill signal for slaves
-    for (int j = 0; j < total_processes; j++) {
-        kill(ctemp[j], SIGTERM);
-    }
-
-}
-
-void sigint_handler(int signum, siginfo_t* info, void* ptr) {
-    // prevents multiple interrupts
-    signal(SIGINT, SIG_IGN);
-    signal(SIGALRM, SIG_IGN);
-
-    std::cout << warning_message << " Interrupt. Exiting.\n";
-
-    // clean shared mem
-    shmdt(shared_num_ptr);
-    shmctl(shmid_shared_num, IPC_RMID, NULL);
-
-    pid_t ctemp[total_processes]; // temporary processes for slaves
-
-    for (int i = 0; i < total_processes; i++) {
-        ctemp[i] = child_pid[i];
-    }
-
-    free(child_pid);
-
-    // kill signal for slaves
-    for (int j = 0; j < total_processes; j++) {
-        kill(ctemp[j], SIGTERM);
-    }
-}
-
-void sigalrm_catcher() {
-    static struct sigaction _sigact;
-
-    memset(&_sigact, 0, sizeof(_sigact));
-
-    _sigact.sa_sigaction = sigalrm_handler;
-    _sigact.sa_flags = SA_SIGINFO;
-
-    sigaction(SIGALRM, &_sigact, NULL);
-}
-
-void sigint_catcher() {
-    static struct sigaction _sigact;
-
-    memset(&_sigact, 0, sizeof(_sigact));
-
-    _sigact.sa_sigaction = sigint_handler;
-    _sigact.sa_flags = SA_SIGINFO;
-
-    sigaction(SIGINT, &_sigact, NULL);
-}
 
 int main(int argc, char* argv[]) {
     error_message = argv[0];
@@ -240,3 +173,75 @@ void child() {
     std::cout << "excel failed to execute.\n" << std::endl;
 }
 
+// Signal handlers
+void sigalrm_handler(int signum, siginfo_t* info, void* ptr) {
+    // ignore other interrupt signals
+    signal(SIGINT, SIG_IGN);
+
+    std::cout << warning_message << " Child processes exceeded limit\n";
+
+    // clean shared mem
+    shmdt(shared_num_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+
+    pid_t ctemp[total_processes]; // temporary processes for slaves
+
+    for (int i = 0; i < total_processes; i++) {
+        ctemp[i] = child_pid[i];
+    }
+
+    free(child_pid);
+
+    // kill signal for slaves
+    for (int j = 0; j < total_processes; j++) {
+        kill(ctemp[j], SIGTERM);
+    }
+
+}
+
+void sigint_handler(int signum, siginfo_t* info, void* ptr) {
+    // prevents multiple interrupts
+    signal(SIGINT, SIG_IGN);
+    signal(SIGALRM, SIG_IGN);
+
+    std::cout << warning_message << " Interrupt. Exiting.\n";
+
+    // clean shared mem
+    shmdt(shared_num_ptr);
+    shmctl(shmid_shared_num, IPC_RMID, NULL);
+
+    pid_t ctemp[total_processes]; // temporary processes for slaves
+
+    for (int i = 0; i < total_processes; i++) {
+        ctemp[i] = child_pid[i];
+    }
+
+    free(child_pid);
+
+    // kill signal for slaves
+    for (int j = 0; j < total_processes; j++) {
+        kill(ctemp[j], SIGTERM);
+    }
+}
+
+void sigalrm_catcher() {
+    static struct sigaction _sigact;
+
+    memset(&_sigact, 0, sizeof(_sigact));
+
+    _sigact.sa_sigaction = sigalrm_handler;
+    _sigact.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGALRM, &_sigact, NULL);
+}
+
+void sigint_catcher() {
+    static struct sigaction _sigact;
+
+    memset(&_sigact, 0, sizeof(_sigact));
+
+    _sigact.sa_sigaction = sigint_handler;
+    _sigact.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGINT, &_sigact, NULL);
+}

@@ -4,6 +4,10 @@
 #include"p2.h"
 #include"config.h"
 
+void catch_sigterm();
+void sigterm_handler(int signum, siginfo_t * info, void* ptr);
+
+
 // Shared mem vars
 int shmid_ticketNumber;
 int* ticketNumber_ptr;
@@ -144,9 +148,7 @@ int main(int argc, char* argv[]){
 
 
 }
-
-void sigterm_handler(int signum, siginfo_t* info, void* ptr)
-{
+void sigterm_handler(int signum, siginfo_t* info, void* ptr){
     // detaching and deleting shared memory
     shmdt(shared_num_ptr);
     shmdt(choosing_ptr);
@@ -155,7 +157,7 @@ void sigterm_handler(int signum, siginfo_t* info, void* ptr)
     shmctl(shmid_choosing, IPC_RMID, NULL);
     shmctl(shmid_ticketNumber, IPC_RMID, NULL);
 
-    logfile << "TERMINATED BY SIGNAL\n";
+    logfile << "##### TERMINATED BY SIGNAL\n\n";
     logfile.close();
     exit(0);
 }
